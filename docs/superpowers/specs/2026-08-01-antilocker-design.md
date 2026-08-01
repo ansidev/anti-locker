@@ -40,15 +40,17 @@ By design, `caffeinate -i` only blocks *idle system sleep*. The user can still:
 
 ### 3.3 First-run setup (config file missing)
 
+**Path rule:** Setup writes to the **effective** config path (default `~/.config/antilocker.yaml` or the `--config` override). The printed `<path>` below is always this effective path.
+
 1. Print: `No config found at <path> — let's set one up.`
 2. Prompt: `Check interval in seconds [3600]:` — empty input defaults to `3600`. Non-numeric or `<= 0` values cause re-prompt.
 3. Prompt: `Add a network name (leave empty to finish):` — repeats until empty input. At least one network is required; loops until one is provided.
 4. Create parent directories if needed, write the YAML config, print the saved path.
-5. Continue directly into the normal run loop with the new config; no restart required.
+5. Continue directly into the normal run loop with the new config; no restart is required. If the process receives SIGTERM during setup, it cancels identically to Ctrl-C (SIGINT).
 
 If stdin is not a TTY (e.g. stdin is piped or closed), first-run setup cannot prompt. The app prints a clear message asking the user to run `antilocker` interactively and exits with code `1`.
 
-### 3.4 Ctrl-C during first-run setup
+### 3.4 Ctrl-C / SIGTERM during first-run setup
 
 - Prints `Setup cancelled.`
 - Does **not** write a partial config file.
@@ -71,14 +73,17 @@ networks:                 # required key (may be an empty list)
   - "Home Network 2"
 ```
 
+**First-run write guarantee:** the interactive setup always writes `interval` and `networks` explicitly (never relies on the YAML default for `interval`).
+
 ### 4.3 Config loading rules
 
 | Condition | Behavior |
 |---|---|
 | File missing | Trigger first-run setup (section 3.3) |
-| Malformed YAML | Print parse error, exit code `1` |
-| `interval` present but `<= 0` or non-numeric | Validation error, exit code `1` |
-| `networks` key missing entirely | Validation error, exit code `1` |
+| Malformed YAML (syntax **or** wrong types — e.g. `interval: high`, `networks: "foo"`) | Print parse/type error, exit code `1` |
+| `networks: null` / `networks: ~` | Validation error ("networks key is required"), exit code `1` |
+| `interval` present but `<= 0` | Validation error, exit code `1` (non-numeric strings are a YAML type error) |
+| `networks` key missing entirely **or** explicitly `null`/`~` | Validation error, exit code `1` |
 | Any `networks` entry empty after trimming | Validation error, exit code `1` |
 | Config file exists but unreadable (permissions / is-a-directory) | Read error message, exit code `1` |
 | Duplicate SSIDs | De-duplicate, print startup warning |
@@ -143,7 +148,7 @@ type Config struct {
 }
 ```
 
-- `Load(path string) (*Config, error)` — resolve `~`, read file, `yaml.Unmarshal`, validate, return. Triggers first-run setup when `os.IsNotExist`.
+- `Load(path string) (*Config, error)` — read file, `yaml.Unmarshal`, validate, return. Returns `os.ErrNotExist` when the file is missing so the caller can trigger first-run setup. (`~` is expanded by the caller before `Load` is invoked.)
 - `Contains(ssid string) bool` — trimmed, exact, case-sensitive match.
 - Validation: `networks` key must exist; `interval > 0` when present; duplicate SSIDs de-duplicated with warning.
 
@@ -163,15 +168,22 @@ type Provider interface {
 }
 
 // ExecProvider is the production implementation; it shells out to macOS.
-type ExecProvider struct{}
-func (ExecProvider) CurrentSSID() (string, error)
+// lookPath is injectable so unit tests never touch real exec.
+// Production wiring passes exec.LookPath.
+type ExecProvider struct{ lookPath func(string) (string, error) }
+func NewExecProvider(lookPath func(string) (string, error)) *ExecProvider
+func (p *ExecProvider) CurrentSSID() (string, error)
 ```
+
+Exec seam: `ExecProvider` takes an injectable `lookPath func(string) (string, error)` so unit tests never touch real `exec` either. The production wiring uses `exec.LookPath`.
 
 `ExecProvider.CurrentSSID()` behavior:
 
 1. `ipconfig getsummary en0` — parse the `  SSID : <value>` line.
 2. Fallback: `system_profiler SPAirPortDataType` — in the `Current Network Information:` block, parse the first network name line.
 3. Empty SSID (Wi-Fi off / not connected) returns `""` with `nil` error.
+
+Note: if the `ipconfig` or `system_profiler` binaries themselves are missing (`exec.ErrNotFound`), `CurrentSSID` returns the lookup error. The loop logs it as a transient warning and retries next tick — only `caffeinate` (checked by `VerifyCaffeinate` at startup) is treated as fatal.
 
 Parsing functions are pure and unit-tested against realistic fixture outputs.
 
@@ -203,9 +215,12 @@ func NewExecManager() *ExecManager
 ### 6.5 Loop (`internal/loop`)
 
 ```go
-Run(ctx context.Context, cfg *config.Config, w wifi.Provider, k keepawake.Manager)
-
-`Run` has no return value: context cancellation / SIGINT/SIGTERM is normal shutdown (exit `0` handled by caller), and all recoverable runtime issues are logged as warnings. Fatal configuration problems are caught before `Run` is invoked.
+// Run executes the periodic check loop until ctx is cancelled.
+// It has no return value: context cancellation / SIGINT/SIGTERM is normal
+// shutdown (exit 0 handled by caller), and all recoverable runtime issues
+// are logged as warnings. Fatal configuration problems are caught before
+// Run is invoked.
+func Run(ctx context.Context, cfg *config.Config, w wifi.Provider, k keepawake.Manager)
 
 1. Log startup summary: config path, networks, interval.
 2. Run one check immediately; set initial caffeinate state.
@@ -267,8 +282,8 @@ Guarantee: `keepawake.Stop()` runs on every exit path via `defer`, so `caffeinat
 |---|---|---|
 | Caffeinate missing from PATH | Clear startup error | 1 |
 | Config YAML malformed | Parse error + hint to fix the file | 1 |
-| `interval` <= 0 / non-numeric | Validation error naming the field | 1 |
-| `networks` key missing | Validation error | 1 |
+| `interval` <= 0 / non-numeric | Validation error naming the field (`interval: high` is a YAML type error; `interval: -1` is a validation error) | 1 |
+| `networks` key missing **or** explicitly `null`/`~` | Validation error | 1 |
 | SSID lookup fails (both commands error) | Timestamped warning, loop continues | — |
 | Wi-Fi drops mid-run | Next tick: SSID empty → stop caffeinate, log transition | — |
 | `caffeinate` start or stop fails mid-run | Timestamped warning, loop continues | — |
