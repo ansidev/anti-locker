@@ -10,8 +10,8 @@
 
 - Binary name: `antilocker`
 - Target platform: macOS only
-- Language: Go
-- Dependencies: `gopkg.in/yaml.v3` (YAML config), `urfave/cli` (CLI framework)
+- Language: Go (minimum toolchain: Go 1.22)
+- Dependencies: `gopkg.in/yaml.v3` (YAML config), `urfave/cli` **v3** (CLI framework)
 
 ## 2. User Workflow
 
@@ -46,6 +46,8 @@ By design, `caffeinate -i` only blocks *idle system sleep*. The user can still:
 4. Create parent directories if needed, write the YAML config, print the saved path.
 5. Continue directly into the normal run loop with the new config; no restart required.
 
+If stdin is not a TTY (e.g. stdin is piped or closed), first-run setup cannot prompt. The app prints a clear message asking the user to run `antilocker` interactively and exits with code `1`.
+
 ### 3.4 Ctrl-C during first-run setup
 
 - Prints `Setup cancelled.`
@@ -77,6 +79,8 @@ networks:                 # required key (may be an empty list)
 | Malformed YAML | Print parse error, exit code `1` |
 | `interval` present but `<= 0` or non-numeric | Validation error, exit code `1` |
 | `networks` key missing entirely | Validation error, exit code `1` |
+| Any `networks` entry empty after trimming | Validation error, exit code `1` |
+| Config file exists but unreadable (permissions / is-a-directory) | Read error message, exit code `1` |
 | Duplicate SSIDs | De-duplicate, print startup warning |
 | `networks: []` (explicitly empty) | Valid; app runs, matches nothing |
 | SSID whitespace | Trimmed at load time |
@@ -96,7 +100,7 @@ Single Go module, flat layout:
 │   ├── config/
 │   │   ├── config.go            # Config struct, Load(), validation, Contains()
 │   │   ├── config_test.go
-│   │   └── firstrun.go          # Interactive first-run setup prompts
+│   │   ├── firstrun.go          # Interactive first-run setup prompts
 │   │   └── firstrun_test.go
 │   ├── wifi/
 │   │   ├── wifi.go              # CurrentSSID(), ipconfig/system_profiler parsers
@@ -150,9 +154,20 @@ type Config struct {
 
 ### 6.3 Wi-Fi (`internal/wifi`)
 
+Package-level discovery functions plus the injectable seam used by the loop:
+
 ```go
-CurrentSSID() (string, error)
+// Provider is the seam injected into internal/loop for testing.
+type Provider interface {
+    CurrentSSID() (string, error)
+}
+
+// ExecProvider is the production implementation; it shells out to macOS.
+type ExecProvider struct{}
+func (ExecProvider) CurrentSSID() (string, error)
 ```
+
+`ExecProvider.CurrentSSID()` behavior:
 
 1. `ipconfig getsummary en0` — parse the `  SSID : <value>` line.
 2. Fallback: `system_profiler SPAirPortDataType` — in the `Current Network Information:` block, parse the first network name line.
@@ -163,32 +178,45 @@ Parsing functions are pure and unit-tested against realistic fixture outputs.
 ### 6.4 Keep-awake (`internal/keepawake`)
 
 ```go
-VerifyCaffeinate() error         // called once at startup
-Start(network string) error      // no-op if already running
-Stop()                           // SIGTERM → grace → SIGKILL; no-op if stopped
-IsRunning() bool
+// Manager is the seam injected into internal/loop for testing.
+type Manager interface {
+    Start(network string) error   // no-op if already running
+    Stop()                        // no-op if already stopped
+    IsRunning() bool
+}
+
+// ExecManager is the production implementation backed by os/exec.
+// VerifyCaffeinate is called once from main() before loop.Run —
+// NOT from inside loop.Run — so loop tests never touch real exec.
+func VerifyCaffeinate() error
+func NewExecManager() *ExecManager
 ```
 
+`ExecManager` behavior:
+
 - Wraps `os/exec`. Spawns persistent `caffeinate -i` as a child process.
-- `Stop()` is safe to call multiple times.
-- `Stop()` is registered via `defer` in the run loop and also invoked on SIGINT/SIGTERM so `caffeinate` never outlives `antilocker`.
+- `Start` — no-op if already running.
+- `Stop()` — SIGTERM → short grace period → SIGKILL; safe to call multiple times.
+- `Stop()` is registered via `defer` in the caller and invoked on SIGINT/SIGTERM, so `caffeinate` never outlives `antilocker`.
 - `caffeinate` output is discarded.
 
 ### 6.5 Loop (`internal/loop`)
 
 ```go
-Run(ctx context.Context, cfg *config.Config, w wifi.Provider, k keepawake.Manager) error
-```
+Run(ctx context.Context, cfg *config.Config, w wifi.Provider, k keepawake.Manager)
+
+`Run` has no return value: context cancellation / SIGINT/SIGTERM is normal shutdown (exit `0` handled by caller), and all recoverable runtime issues are logged as warnings. Fatal configuration problems are caught before `Run` is invoked.
 
 1. Log startup summary: config path, networks, interval.
-2. Call `VerifyCaffeinate()` — fatal if missing (exit code 1).
-3. Run one check immediately; set initial caffeinate state.
-4. On every `time.Ticker` tick: `CurrentSSID()` → `cfg.Contains(ssid)`:
+2. Run one check immediately; set initial caffeinate state.
+3. On every `time.Ticker` tick: `w.CurrentSSID()` → `cfg.Contains(ssid)`:
    - match && !running → `k.Start(ssid)` → log
    - !match && running → `k.Stop()` → log
    - otherwise → silent no-op
-5. Listen for `SIGINT`/`SIGTERM` → `k.Stop()` → exit `0`.
-6. Transient errors (SSID lookup failure, caffeinate start/stop failure) are logged as timestamped warnings; the loop continues and retries next tick.
+4. On `ctx.Done()` (SIGINT/SIGTERM are wired to `context.WithCancel` by the caller): `k.Stop()`, return. Caller exits `0`.
+5. Transient errors (SSID lookup failure, caffeinate start/stop failure) are logged as timestamped warnings; the loop continues and retries next tick.
+
+Note: `VerifyCaffeinate()` is called from `main.go` between `config.Load` and `loop.Run` — never inside `Run` — preserving the no-real-`exec` seam for loop tests.
 
 ## 7. Data Flow
 
