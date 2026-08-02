@@ -556,16 +556,24 @@ func Load(path string) (*Config, error) {
 	}
 
 	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+
+	// Decode into a shadow struct so we can distinguish "key absent"
+	// (nil pointer → default 3600, spec §4.2) from "explicitly 0"
+	// (validation error per §4.3 / TestLoad_IntervalZero).
+	var raw struct {
+		Interval *int     `yaml:"interval"`
+		Networks []string `yaml:"networks"`
+	}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return nil, err
 	}
 
-	// spec §4.2: "interval: 3600  # optional, seconds; defaults to 3600"
-	// If the key was omitted from the YAML, apply the default. If the key is
-	// present but <= 0, validate will report an error.
-	if cfg.Interval == 0 {
-		cfg.Interval = 3600
+	if raw.Interval == nil {
+		cfg.Interval = 3600 // specified default (spec §4.2)
+	} else {
+		cfg.Interval = *raw.Interval
 	}
+	cfg.Networks = raw.Networks
 
 	if err := validate(&cfg); err != nil {
 		return nil, err
@@ -1785,23 +1793,22 @@ Implements the CLI composition root: `urfave/cli` app setup, composition of `con
 ```go
 package main
 
- import (
- 	"bufio"
- 	"context"
- 	"errors"
- 	"fmt"
- 	"os"
- 	"os/signal"
- 	"path/filepath"
- 	"strings"
- 	"syscall"
- 
- 	"github.com/ansidev/antilocker/internal/config"
- 	"github.com/ansidev/antilocker/internal/keepawake"
- 	"github.com/ansidev/antilocker/internal/loop"
- 	"github.com/ansidev/antilocker/internal/wifi"
- 	"github.com/urfave/cli/v3"
- )
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"strings"
+	"syscall"
+
+	"github.com/ansidev/antilocker/internal/config"
+	"github.com/ansidev/antilocker/internal/keepawake"
+	"github.com/ansidev/antilocker/internal/loop"
+	"github.com/ansidev/antilocker/internal/wifi"
+	"github.com/urfave/cli/v3"
+)
 
 var version = "dev" // overridden by ldflags
 
