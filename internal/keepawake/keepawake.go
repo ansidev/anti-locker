@@ -43,10 +43,11 @@ func WithCommandFactory(f CommandFactory) ExecManagerOption {
 // `alive` to false when the process exits on its own. IsRunning reflects
 // the *actual* liveness of the child, not just the non-nil cmd pointer.
 type ExecManager struct {
-	mu     sync.Mutex
-	cmd    *exec.Cmd
-	alive  bool // true while child is running; cleared by reaper goroutine
-	newCmd CommandFactory
+	mu       sync.Mutex
+	cmd      *exec.Cmd
+	alive    bool          // true while child is running; cleared by reaper goroutine
+	reapDone chan struct{} // closed when reaper's Wait() returns; Stop waits on this
+	newCmd   CommandFactory
 }
 
 // NewExecManager returns an ExecManager using exec.Command by default.
@@ -73,12 +74,14 @@ func (m *ExecManager) Start(network string) error {
 		return nil // already running
 	}
 	// If we have a stale cmd from a process that died on its own, clear it.
-	if m.cmd != nil && m.cmd.ProcessState != nil && m.cmd.ProcessState.Exited() {
+	// The reaper clears `alive` only after Wait() finishes, so if we see
+	// !alive and a non-nil cmd, the child has already exited and Wait() is
+	// done — no race with ProcessState.
+	if m.cmd != nil && !m.alive {
 		m.cmd = nil
 	}
 	if m.cmd != nil {
-		// Defensive: alive==false but cmd non-nil and not exited yet —
-		// treat as starting; refuse.
+		// Defensive: alive==false but cmd non-nil — treat as starting; refuse.
 		return fmt.Errorf("previous caffeinate child not yet reaped")
 	}
 
@@ -92,8 +95,11 @@ func (m *ExecManager) Start(network string) error {
 	m.cmd = cmd
 	m.alive = true
 
-	// Reaper goroutine: clears alive when the process exits on its own so
-	// IsRunning reflects truth even if Stop is never called.
+	// Reaper goroutine: the ONLY caller of cmd.Wait(). This avoids the
+	// race between a second Wait in Stop's grace goroutine and here.
+	// It signals completion by closing reapDone so Stop can wait on it.
+	reapDone := make(chan struct{})
+	m.reapDone = reapDone
 	go func(c *exec.Cmd) {
 		_ = c.Wait()
 		m.mu.Lock()
@@ -101,6 +107,7 @@ func (m *ExecManager) Start(network string) error {
 			m.alive = false
 		}
 		m.mu.Unlock()
+		close(reapDone)
 	}(cmd)
 
 	return nil
@@ -109,37 +116,39 @@ func (m *ExecManager) Start(network string) error {
 // Stop terminates the caffeinate process. It is a no-op if already stopped.
 //
 // Sequence (spec §6.4): SIGTERM → short grace period → SIGKILL.
-// State cleanup is synced with the reaper goroutine in Start.
+// The reaper goroutine (from Start) is the sole caller of cmd.Wait(), so
+// Stop waits on reapDone for the child to be reaped instead of calling
+// Wait again (which would race).
 func (m *ExecManager) Stop() {
 	m.mu.Lock()
 	cmd := m.cmd
+	reapDone := m.reapDone
 	// Mark not-alive immediately so concurrent IsRunning reports false
 	// while we SIGTERM/KILL.
 	m.alive = false
 	m.cmd = nil
+	m.reapDone = nil
 	m.mu.Unlock()
 
 	if cmd == nil {
 		return // already stopped
 	}
-	if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-		return // child already exited (reaper cleared alive); nothing to do
-	}
+	// No ProcessState check here: reading it concurrently with the reaper's
+	// Wait() would itself be a data race. If the child already exited, the
+	// reaper has closed reapDone, so the select below returns immediately.
 
 	// 1. Send SIGTERM (spec §6.4).
 	_ = cmd.Process.Signal(syscall.SIGTERM)
 
-	// 2. Grace period for clean exit.
+	// 2. Grace period for clean exit. The reaper's Wait() is what reaps;
+	//    we just wait for it to signal completion.
 	grace := 100 * time.Millisecond
-	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
-
 	select {
-	case <-done:
+	case <-reapDone:
 		return
 	case <-time.After(grace):
 		_ = cmd.Process.Kill()
-		<-done // reap the child to avoid zombies
+		<-reapDone // reap the child to avoid zombies
 	}
 }
 

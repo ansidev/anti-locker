@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -47,6 +48,31 @@ func run(m *testing.M) int {
 	return m.Run()
 }
 
+// safeBuffer is a mutex-protected bytes.Buffer for concurrent use
+// (exec.Cmd's pipe goroutines write while the test goroutine reads).
+type safeBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *safeBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *safeBuffer) Contains(b []byte) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return bytes.Contains(s.buf.Bytes(), b)
+}
+
+func (s *safeBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
+
 func TestMain_CleanShutdown(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -70,9 +96,10 @@ func TestMain_CleanShutdown(t *testing.T) {
 	// Don't propagate SIGINT to the whole process group.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	var stdout, stderr bytes.Buffer
+	var stdout bytes.Buffer
+	stderr := &safeBuffer{}
 	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	cmd.Stderr = stderr
 
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("start: %v", err)
@@ -85,7 +112,7 @@ func TestMain_CleanShutdown(t *testing.T) {
 	deadline := time.Now().Add(2 * time.Second)
 	ready := false
 	for time.Now().Before(deadline) {
-		if bytes.Contains(stderr.Bytes(), []byte("Starting anti-locker")) {
+		if stderr.Contains([]byte("Starting anti-locker")) {
 			ready = true
 			break
 		}
