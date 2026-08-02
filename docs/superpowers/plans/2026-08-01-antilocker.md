@@ -463,6 +463,47 @@ func TestContains_EmptyNetworks(t *testing.T) {
 		t.Error("expected Contains to return false for empty networks list")
 	}
 }
+
+// Spec §4.2: "interval: 3600  # optional, seconds; defaults to 3600"
+func TestLoad_DefaultInterval(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	if err := os.WriteFile(cfgPath, []byte(`networks:
+  - "Home"
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := config.Load(cfgPath)
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	if cfg.Interval != 3600 {
+		t.Errorf("Interval = %d, want 3600 (default)", cfg.Interval)
+	}
+}
+
+// Spec §4.3: explicit networks: [] is valid and matches nothing.
+func TestLoad_EmptyNetworksListIsValid(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	if err := os.WriteFile(cfgPath, []byte(`interval: 3600
+networks: []
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := config.Load(cfgPath)
+	if err != nil {
+		t.Fatalf("Load() unexpected error: %v", err)
+	}
+	if len(cfg.Networks) != 0 {
+		t.Errorf("len(Networks) = %d, want 0", len(cfg.Networks))
+	}
+	if cfg.Contains("anything") {
+		t.Error("Contains returned true for empty list")
+	}
+}
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -517,6 +558,13 @@ func Load(path string) (*Config, error) {
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
+	}
+
+	// spec §4.2: "interval: 3600  # optional, seconds; defaults to 3600"
+	// If the key was omitted from the YAML, apply the default. If the key is
+	// present but <= 0, validate will report an error.
+	if cfg.Interval == 0 {
+		cfg.Interval = 3600
 	}
 
 	if err := validate(&cfg); err != nil {
@@ -1261,7 +1309,8 @@ import (
 )
 
 // fakeCommand returns an *exec.Cmd that, when started, runs this same test
-// binary in helper mode and exits immediately. The standard Go pattern.
+// binary in helper mode and BLOCKS until killed (simulating persistent caffeinate).
+// The standard Go pattern: the current test binary re-runs itself in a special mode.
 func fakeCommand(name string, args ...string) *exec.Cmd {
 	cmdArgs := append([]string{"-test.run=TestHelperProcess", "--", name}, args...)
 	cmd := exec.Command(os.Args[0], cmdArgs...)
@@ -1269,13 +1318,16 @@ func fakeCommand(name string, args ...string) *exec.Cmd {
 	return cmd
 }
 
-// TestHelperProcess is the in-test helper. It must exit 0.
+// TestHelperProcess is the in-test helper. It simulates a long-running
+// "child process" by blocking forever (exits only via signal/KILL from Stop).
 func TestHelperProcess(t *testing.T) {
 	if os.Getenv("GO_HELPER_PROCESS") != "1" {
-		return
+		return // not in helper mode — skip
 	}
-	os.Exit(0)
+	// Block indefinitely; Stop() will send SIGKILL/KILL and then Wait() reap.
+	select {}
 }
+```
 
 func TestExecManager_StartStop(t *testing.T) {
 	m := keepawake.NewExecManager(keepawake.WithCommandFactory(fakeCommand))
@@ -1963,8 +2015,22 @@ func TestMain_CleanShutdown(t *testing.T) {
 		t.Fatalf("start: %v", err)
 	}
 
-	// Give the child a moment to enter Run().
-	time.Sleep(500 * time.Millisecond)
+	// Wait for the child to print its startup line. This is a lightweight
+	// readiness check so we don't SIGINT before signal.NotifyContext is
+	// installed in the child. Timeout after 2s.
+	deadline := time.Now().Add(2 * time.Second)
+	ready := false
+	for time.Now().Before(deadline) {
+		if bytes.Contains(stdout.Bytes(), []byte("Starting anti-locker")) {
+			ready = true
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if !ready {
+		t.Fatalf("child never printed startup line\nstdout:\n%s\nstderr:\n%s",
+			stdout.String(), stderr.String())
+	}
 
 	// Send SIGINT to the child; assert it exits cleanly with code 0.
 	if err := cmd.Process.Signal(os.Interrupt); err != nil {
@@ -2108,21 +2174,6 @@ go test -short ./...   # all PASS, integration test SKIPs
 ```bash
 git add internal/wifi/wifi_integration_test.go
 git commit -m "test(wifi): add integration test gated by testing.Short (no build tag)"
-```
-
-- [ ] **Step 2: Run it as part of default tests**
-
-Run: `go test ./internal/wifi/ -v -run TestCurrentSSID_Integration`
-Expected: PASS (or SKIP if the machine is genuinely mid-flight — log a warning and move on).
-
-Run: `go test -short ./...`
-Expected: PASS with integration test skipped (INSKIP).
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add internal/wifi/wifi_integration_test.go
-git commit -m "test(wifi): add opt-in integration test gated by testing.Short"
 ```
 
 ---
