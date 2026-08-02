@@ -96,9 +96,9 @@ func TestMain_CleanShutdown(t *testing.T) {
 	// Don't propagate SIGINT to the whole process group.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	var stdout bytes.Buffer
+	stdout := &safeBuffer{}
 	stderr := &safeBuffer{}
-	cmd.Stdout = &stdout
+	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
 	if err := cmd.Start(); err != nil {
@@ -119,6 +119,10 @@ func TestMain_CleanShutdown(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	if !ready {
+		// Kill and reap the child first to stop exec's pipe writers,
+		// then read the buffers safely.
+		_ = cmd.Process.Kill()
+		cmd.Wait()
 		t.Fatalf("child never printed startup line\nstdout:\n%s\nstderr:\n%s",
 			stdout.String(), stderr.String())
 	}
