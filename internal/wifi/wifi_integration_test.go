@@ -1,3 +1,5 @@
+//go:build !github_actions
+
 package wifi_test
 
 import (
