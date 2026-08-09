@@ -17,7 +17,7 @@ func TestRun_SetupPrompts(t *testing.T) {
 	inputStr := "\nHome Wi-Fi\n\n"
 	var buf bytes.Buffer
 
-	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "antilocker.yaml"), strings.NewReader(inputStr), &buf)
+	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "anti-locker.yaml"), strings.NewReader(inputStr), &buf)
 	if err != nil {
 		t.Fatalf("Run() unexpected error: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestRun_InvalidIntervalRePrompts(t *testing.T) {
 	inputStr := "abc\n-1\n0\n600\nHome Wi-Fi\n\n"
 	var buf bytes.Buffer
 
-	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "antilocker.yaml"), strings.NewReader(inputStr), &buf)
+	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "anti-locker.yaml"), strings.NewReader(inputStr), &buf)
 	if err != nil {
 		t.Fatalf("Run() unexpected error: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestRun_NetworkRequired(t *testing.T) {
 	inputStr := "600\n\nHome Wi-Fi\n\n"
 	var buf bytes.Buffer
 
-	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "antilocker.yaml"), strings.NewReader(inputStr), &buf)
+	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "anti-locker.yaml"), strings.NewReader(inputStr), &buf)
 	if err != nil {
 		t.Fatalf("Run() unexpected error: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestRun_CancelledByContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // already cancelled before Run starts
 
-	target := filepath.Join(t.TempDir(), "antilocker.yaml")
+	target := filepath.Join(t.TempDir(), "anti-locker.yaml")
 	var buf bytes.Buffer
 
 	_, err := config.Run(ctx, target, strings.NewReader(""), &buf)
