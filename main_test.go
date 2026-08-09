@@ -136,8 +136,7 @@ func TestMain_CleanShutdown(t *testing.T) {
 
 	err := cmd.Wait()
 
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 		// Non-zero exit is a failure (spec §8: Ctrl-C → exit 0 after clean stop).
 		t.Fatalf("expected exit 0, got %v\nstdout:\n%s\nstderr:\n%s",
 			exitErr, stdout.String(), stderr.String())
@@ -166,8 +165,7 @@ func TestMain_NonTTYFirstRun_FailsClean(t *testing.T) {
 
 	err := cmd.Run()
 
-	var exitErr *exec.ExitError
-	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); !ok || exitErr.ExitCode() != 1 {
 		t.Fatalf("expected exit 1, got %v\nstdout:\n%s\nstderr:\n%s",
 			err, stdout.String(), stderr.String())
 	}
