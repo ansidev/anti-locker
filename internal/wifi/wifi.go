@@ -15,17 +15,20 @@ type Provider interface {
 // macOS binaries. runCmd is injectable so unit tests never touch
 // real exec. Production wiring passes nil to use a real exec runner.
 type ExecProvider struct {
-	runCmd func(string) (string, error)
+	runCmd func() (string, error)
 }
 
 // NewExecProvider returns an ExecProvider that uses runCmd to
 // execute macOS binaries and return their output. Pass nil to use
 // the real exec-based runner.
-func NewExecProvider(runCmd func(string) (string, error)) *ExecProvider {
+func NewExecProvider(runCmd func() (string, error)) *ExecProvider {
+	if runCmd == nil {
+		runCmd = runReal
+	}
 	return &ExecProvider{runCmd: runCmd}
 }
 
-func (p *ExecProvider) CurrentSSID() (string, error) {
+func runReal() (string, error) {
 	networks, err := macwifi.Scan(context.Background())
 	if err != nil {
 		return "", err
@@ -38,4 +41,8 @@ func (p *ExecProvider) CurrentSSID() (string, error) {
 	}
 
 	return "", err // transient warning by loop
+}
+
+func (p *ExecProvider) CurrentSSID() (string, error) {
+	return p.runCmd()
 }
