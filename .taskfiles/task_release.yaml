@@ -7,7 +7,7 @@ env:
   CHANGES_DIR: .changes
 
 vars:
-  VERSION_FILE: package.json
+  VERSION_FILE: go.mod go.sum
 
 tasks:
   prepare:
