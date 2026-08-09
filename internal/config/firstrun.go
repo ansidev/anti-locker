@@ -31,7 +31,9 @@ var ErrCancelled = errors.New("setup cancelled")
 // path, prints "Config saved to <path>" on success (spec §3.3 step 4), and
 // returns the Config.
 func Run(ctx context.Context, path string, reader io.Reader, w io.Writer) (*Config, error) {
-	fmt.Fprintf(w, "No config found at %s — let's set one up.\n", path)
+	if _, err := fmt.Fprintf(w, "No config found at %s — let's set one up.\n", path); err != nil {
+		return nil, fmt.Errorf("writing preamble: %w", err)
+	}
 
 	lines := make(chan string, 16)
 	scanErrs := make(chan error, 1)
@@ -81,7 +83,9 @@ func Run(ctx context.Context, path string, reader io.Reader, w io.Writer) (*Conf
 		return nil, err
 	}
 
-	fmt.Fprintf(w, "Config saved to %s\n", path)
+	if _, err := fmt.Fprintf(w, "Config saved to %s\n", path); err != nil {
+		return nil, fmt.Errorf("writing confirmation: %w", err)
+	}
 	return cfg, nil
 }
 
@@ -89,7 +93,9 @@ func Run(ctx context.Context, path string, reader io.Reader, w io.Writer) (*Conf
 // invalid input. Returns ErrCancelled when readLine fails.
 func promptInterval(readLine func() (string, error), w io.Writer) (int, error) {
 	for {
-		fmt.Fprint(w, "Check interval in seconds [3600]: ")
+		if _, err := fmt.Fprint(w, "Check interval in seconds [3600]: "); err != nil {
+			return 0, err
+		}
 		raw, err := readLine()
 		if err != nil {
 			return 0, err
@@ -100,7 +106,9 @@ func promptInterval(readLine func() (string, error), w io.Writer) (int, error) {
 		}
 		var n int
 		if _, err := fmt.Sscanf(raw, "%d", &n); err != nil || n <= 0 {
-			fmt.Fprintln(w, "Please enter a positive integer.")
+			if _, err := fmt.Fprintln(w, "Please enter a positive integer."); err != nil {
+				return 0, err
+			}
 			continue
 		}
 		return n, nil
@@ -112,7 +120,9 @@ func promptInterval(readLine func() (string, error), w io.Writer) (int, error) {
 func promptNetworks(readLine func() (string, error), w io.Writer) ([]string, error) {
 	var networks []string
 	for {
-		fmt.Fprint(w, "Add a network name (leave empty to finish): ")
+		if _, err := fmt.Fprint(w, "Add a network name (leave empty to finish): "); err != nil {
+			return nil, err
+		}
 		raw, err := readLine()
 		if err != nil {
 			return nil, err
@@ -120,7 +130,9 @@ func promptNetworks(readLine func() (string, error), w io.Writer) ([]string, err
 		name := strings.TrimSpace(raw)
 		if name == "" {
 			if len(networks) == 0 {
-				fmt.Fprintln(w, "At least one network is required.")
+				if _, err := fmt.Fprintln(w, "At least one network is required."); err != nil {
+					return nil, err
+				}
 				continue
 			}
 			return networks, nil

@@ -34,7 +34,7 @@ func run(m *testing.M) int {
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	bin := filepath.Join(dir, "antilocker")
 	build := exec.Command("go", "build", "-o", bin, ".")
@@ -122,7 +122,9 @@ func TestMain_CleanShutdown(t *testing.T) {
 		// Kill and reap the child first to stop exec's pipe writers,
 		// then read the buffers safely.
 		_ = cmd.Process.Kill()
-		cmd.Wait()
+		if err := cmd.Wait(); err != nil {
+			t.Logf("cmd.Wait after kill: %v", err)
+		}
 		t.Fatalf("child never printed startup line\nstdout:\n%s\nstderr:\n%s",
 			stdout.String(), stderr.String())
 	}
