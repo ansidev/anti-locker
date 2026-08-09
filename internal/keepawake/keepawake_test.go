@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/ansidev/antilocker/internal/keepawake"
+	"github.com/ansidev/anti-locker/internal/keepawake"
 )
 
 func TestVerifyCaffeinate_Found(t *testing.T) {

@@ -1,4 +1,4 @@
-module github.com/ansidev/antilocker
+module github.com/ansidev/anti-locker
 
 go 1.22
 

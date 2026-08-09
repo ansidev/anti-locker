@@ -108,12 +108,12 @@ Foundational workstream. Sequential tasks. Once merged, Wave 1 lanes can start.
 Run:
 ```bash
 cd /Users/ansidev/projects/personal/anti-locker
-go mod init github.com/ansidev/antilocker
+go mod init github.com/ansidev/anti-locker
 ```
 
 Expected output:
 ```
-go: creating new go.mod: module github.com/ansidev/antilocker
+go: creating new go.mod: module github.com/ansidev/anti-locker
 go: to add module requirements and sums:
 	go mod tidy
 ```
@@ -123,7 +123,7 @@ go: to add module requirements and sums:
 Open `go.mod`, ensure the `go` directive matches the minimum toolchain from the spec (1.22). Example contents:
 
 ```go
-module github.com/ansidev/antilocker
+module github.com/ansidev/anti-locker
 
 go 1.22
 ```
@@ -133,7 +133,7 @@ If `go mod init` wrote `go 1.26.1` (or similar bleeding-edge version), edit the 
 - [ ] **Step 3: Verify the module parses**
 
 Run: `go list -m`
-Expected: `github.com/ansidev/antilocker`
+Expected: `github.com/ansidev/anti-locker`
 
 - [ ] **Step 4: Commit**
 
@@ -243,7 +243,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ansidev/antilocker/internal/config"
+	"github.com/ansidev/anti-locker/internal/config"
 )
 
 func TestLoad_HappyPath(t *testing.T) {
@@ -673,7 +673,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ansidev/antilocker/internal/config"
+	"github.com/ansidev/anti-locker/internal/config"
 )
 
 func TestRun_SetupPrompts(t *testing.T) {
@@ -987,7 +987,7 @@ package wifi_test
 import (
 	"testing"
 
-	"github.com/ansidev/antilocker/internal/wifi"
+	"github.com/ansidev/anti-locker/internal/wifi"
 )
 
 func TestCurrentSSID_IPConfigPrimary(t *testing.T) {
@@ -1232,7 +1232,7 @@ package keepawake_test
 import (
 	"testing"
 
-	"github.com/ansidev/antilocker/internal/keepawake"
+	"github.com/ansidev/anti-locker/internal/keepawake"
 )
 
 func TestVerifyCaffeinate_Found(t *testing.T) {
@@ -1313,7 +1313,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/ansidev/antilocker/internal/keepawake"
+	"github.com/ansidev/anti-locker/internal/keepawake"
 )
 
 // fakeCommand returns an *exec.Cmd that, when started, runs this same test
@@ -1564,8 +1564,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ansidev/antilocker/internal/config"
-	"github.com/ansidev/antilocker/internal/loop"
+	"github.com/ansidev/anti-locker/internal/config"
+	"github.com/ansidev/anti-locker/internal/loop"
 )
 
 type fakeWiFi struct {
@@ -1656,9 +1656,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/ansidev/antilocker/internal/config"
-	"github.com/ansidev/antilocker/internal/keepawake"
-	"github.com/ansidev/antilocker/internal/wifi"
+	"github.com/ansidev/anti-locker/internal/config"
+	"github.com/ansidev/anti-locker/internal/keepawake"
+	"github.com/ansidev/anti-locker/internal/wifi"
 )
 
 // Run executes the periodic check loop until ctx is cancelled.
@@ -1803,10 +1803,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/ansidev/antilocker/internal/config"
-	"github.com/ansidev/antilocker/internal/keepawake"
-	"github.com/ansidev/antilocker/internal/loop"
-	"github.com/ansidev/antilocker/internal/wifi"
+	"github.com/ansidev/anti-locker/internal/config"
+	"github.com/ansidev/anti-locker/internal/keepawake"
+	"github.com/ansidev/anti-locker/internal/loop"
+	"github.com/ansidev/anti-locker/internal/wifi"
 	"github.com/urfave/cli/v3"
 )
 
@@ -2133,7 +2133,7 @@ package wifi_test
 import (
 	"testing"
 
-	"github.com/ansidev/antilocker/internal/wifi"
+	"github.com/ansidev/anti-locker/internal/wifi"
 )
 
 // TestCurrentSSID_Integration verifies real SSID detection against the

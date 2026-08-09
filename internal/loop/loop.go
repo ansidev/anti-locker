@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/ansidev/antilocker/internal/config"
-	"github.com/ansidev/antilocker/internal/keepawake"
-	"github.com/ansidev/antilocker/internal/wifi"
+	"github.com/ansidev/anti-locker/internal/config"
+	"github.com/ansidev/anti-locker/internal/keepawake"
+	"github.com/ansidev/anti-locker/internal/wifi"
 )
 
 // Run executes the periodic check loop until ctx is cancelled.
