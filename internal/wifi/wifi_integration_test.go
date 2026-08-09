@@ -3,7 +3,7 @@ package wifi_test
 import (
 	"testing"
 
-	"github.com/ansidev/antilocker/internal/wifi"
+	"github.com/ansidev/anti-locker/internal/wifi"
 )
 
 // TestCurrentSSID_Integration verifies real SSID detection against the

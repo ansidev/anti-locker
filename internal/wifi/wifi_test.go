@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ansidev/antilocker/internal/wifi"
+	"github.com/ansidev/anti-locker/internal/wifi"
 )
 
 func TestCurrentSSID_IPConfigPrimary(t *testing.T) {

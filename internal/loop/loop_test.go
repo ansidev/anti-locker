@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ansidev/antilocker/internal/config"
-	"github.com/ansidev/antilocker/internal/loop"
+	"github.com/ansidev/anti-locker/internal/config"
+	"github.com/ansidev/anti-locker/internal/loop"
 )
 
 type fakeWiFi struct {

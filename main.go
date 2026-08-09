@@ -10,10 +10,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/ansidev/antilocker/internal/config"
-	"github.com/ansidev/antilocker/internal/keepawake"
-	"github.com/ansidev/antilocker/internal/loop"
-	"github.com/ansidev/antilocker/internal/wifi"
+	"github.com/ansidev/anti-locker/internal/config"
+	"github.com/ansidev/anti-locker/internal/keepawake"
+	"github.com/ansidev/anti-locker/internal/loop"
+	"github.com/ansidev/anti-locker/internal/wifi"
 	"github.com/urfave/cli/v3"
 )
 

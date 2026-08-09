@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ansidev/antilocker/internal/config"
+	"github.com/ansidev/anti-locker/internal/config"
 )
 
 func TestRun_SetupPrompts(t *testing.T) {

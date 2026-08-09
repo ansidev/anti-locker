@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ansidev/antilocker/internal/config"
+	"github.com/ansidev/anti-locker/internal/config"
 )
 
 func TestLoad_HappyPath(t *testing.T) {
