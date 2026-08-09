@@ -2,7 +2,7 @@
 .opencode/
 
 # Binaries
-antilocker
+anti-locker
 *.test
 *.out
 

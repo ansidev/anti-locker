@@ -30,13 +30,13 @@ func run(m *testing.M) int {
 		return m.Run()
 	}
 
-	dir, err := os.MkdirTemp("", "antilocker-integration-*")
+	dir, err := os.MkdirTemp("", "anti-locker-integration-*")
 	if err != nil {
 		panic(err)
 	}
 	defer func() { _ = os.RemoveAll(dir) }()
 
-	bin := filepath.Join(dir, "antilocker")
+	bin := filepath.Join(dir, "anti-locker")
 	build := exec.Command("go", "build", "-o", bin, ".")
 	build.Stdout = os.Stdout
 	build.Stderr = os.Stderr
@@ -79,7 +79,7 @@ func TestMain_CleanShutdown(t *testing.T) {
 	}
 
 	tmp := t.TempDir()
-	cfgPath := filepath.Join(tmp, "antilocker.yaml")
+	cfgPath := filepath.Join(tmp, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte("interval: 3600\nnetworks:\n  - \"Test Wi-Fi\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -136,8 +136,7 @@ func TestMain_CleanShutdown(t *testing.T) {
 
 	err := cmd.Wait()
 
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 		// Non-zero exit is a failure (spec §8: Ctrl-C → exit 0 after clean stop).
 		t.Fatalf("expected exit 0, got %v\nstdout:\n%s\nstderr:\n%s",
 			exitErr, stdout.String(), stderr.String())
@@ -154,7 +153,7 @@ func TestMain_NonTTYFirstRun_FailsClean(t *testing.T) {
 	}
 
 	// Use a path that doesn't exist so the app tries first-run setup.
-	missing := filepath.Join(t.TempDir(), "antilocker.yaml")
+	missing := filepath.Join(t.TempDir(), "anti-locker.yaml")
 
 	cmd := exec.Command(testBinary, "--config", missing)
 	// Pipe stdin (non-terminal) — spec §3.3 requires a clear error, exit 1.
@@ -166,8 +165,7 @@ func TestMain_NonTTYFirstRun_FailsClean(t *testing.T) {
 
 	err := cmd.Run()
 
-	var exitErr *exec.ExitError
-	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); !ok || exitErr.ExitCode() != 1 {
 		t.Fatalf("expected exit 1, got %v\nstdout:\n%s\nstderr:\n%s",
 			err, stdout.String(), stderr.String())
 	}

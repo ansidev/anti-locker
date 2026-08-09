@@ -14,7 +14,7 @@ import (
 // distinguish them from IO or parse errors.
 var ErrValidation = errors.New("config validation error")
 
-// Config holds the parsed antilocker.yaml contents.
+// Config holds the parsed anti-locker.yaml contents.
 // Path records the file location for startup logging (spec §6.5).
 // yaml:"-" prevents it being read from or written to the YAML file.
 type Config struct {

@@ -1,20 +1,20 @@
 # Anti Locker
 
-`antilocker` keeps your MacBook awake by preventing idle sleep — but only when you're on a Wi-Fi network you've explicitly allowed. On any other network (or if Wi-Fi is off) it stays silent and lets your Mac sleep normally.
+`anti-locker` keeps your MacBook awake by preventing idle sleep — but only when you're on a Wi-Fi network you've explicitly allowed. On any other network (or if Wi-Fi is off) it stays silent and lets your Mac sleep normally.
 
-**macOS only.** Manual screen lock (`Ctrl+Cmd+Q`) and display-off always work — `antilocker` only blocks *idle* sleep, never your explicit actions.
+**macOS only.** Manual screen lock (`Ctrl+Cmd+Q`) and display-off always work — `anti-locker` only blocks *idle* sleep, never your explicit actions.
 
 ## Install
 
-    go build -o antilocker .
-    # optionally: install -m 0755 antilocker /usr/local/bin/antilocker
+    go build -o anti-locker .
+    # optionally: install -m 0755 anti-locker /usr/local/bin/anti-locker
 
 ## Usage
 
-    antilocker                                # use ~/.config/antilocker.yaml
-    antilocker --config /path/to/config.yaml  # custom config path
+    anti-locker                                # use ~/.config/anti-locker.yaml
+    anti-locker --config /path/to/config.yaml  # custom config path
 
-On first run (no config file), `antilocker` will interactively ask for:
+On first run (no config file), `anti-locker` will interactively ask for:
 
 1. **Check interval** in seconds (default `3600`)
 2. **Wi-Fi networks** to keep the Mac awake on (at least one, one at a time, empty line to finish)
@@ -37,7 +37,7 @@ networks:                 # required, may be empty list
 
 ## How it works
 
-1. Every `interval` seconds, `antilocker` checks the current Wi-Fi SSID via `ipconfig getsummary en0` (falling back to `system_profiler SPAirPortDataType`).
+1. Every `interval` seconds, `anti-locker` checks the current Wi-Fi SSID via `ipconfig getsummary en0` (falling back to `system_profiler SPAirPortDataType`).
 2. If the SSID matches a configured network, it spawns `caffeinate -i` to block idle sleep.
 3. If the SSID stops matching (or Wi-Fi drops), it stops `caffeinate`.
 4. `Ctrl-C` cleanly shuts down the app and terminates `caffeinate`.
@@ -49,7 +49,7 @@ networks:                 # required, may be empty list
     go test -short ./...
     go vet ./...
     gofmt -s -l .
-    GOOS=darwin go build -o antilocker .
+    GOOS=darwin go build -o anti-locker .
 
 ## License
 

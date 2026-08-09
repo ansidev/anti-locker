@@ -10,7 +10,7 @@ import (
 
 func TestLoad_HappyPath(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 600
 networks:
   - "My Home"
@@ -36,7 +36,7 @@ networks:
 
 func TestLoad_MissingNetworksKey(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 600
 `), 0o600); err != nil {
 		t.Fatal(err)
@@ -50,7 +50,7 @@ func TestLoad_MissingNetworksKey(t *testing.T) {
 
 func TestLoad_IntervalZero(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 0
 networks:
   - "Home"
@@ -66,7 +66,7 @@ networks:
 
 func TestLoad_MalformedYAML(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: high
 networks:
   - "Home"
@@ -82,7 +82,7 @@ networks:
 
 func TestLoad_NullNetworks(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 3600
 networks: null
 `), 0o600); err != nil {
@@ -98,7 +98,7 @@ networks: null
 // Spec §4.3: "SSID whitespace: Trimmed at load time."
 func TestLoad_TrimsSSIDWhitespace(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 3600
 networks:
   - "  Padded Network  "
@@ -117,7 +117,7 @@ networks:
 
 func TestLoad_EmptyNetworkEntry(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 3600
 networks:
   - ""
@@ -155,7 +155,7 @@ func TestContains_EmptyNetworks(t *testing.T) {
 // Spec §4.2: "interval: 3600  # optional, seconds; defaults to 3600"
 func TestLoad_DefaultInterval(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`networks:
   - "Home"
 `), 0o600); err != nil {
@@ -174,7 +174,7 @@ func TestLoad_DefaultInterval(t *testing.T) {
 // Spec §4.3: explicit networks: [] is valid and matches nothing.
 func TestLoad_EmptyNetworksListIsValid(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 3600
 networks: []
 `), 0o600); err != nil {

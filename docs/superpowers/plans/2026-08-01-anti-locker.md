@@ -248,7 +248,7 @@ import (
 
 func TestLoad_HappyPath(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 600
 networks:
   - "My Home"
@@ -289,7 +289,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config holds the parsed antilocker.yaml contents.
+// Config holds the parsed anti-locker.yaml contents.
 // Path records the file location for startup logging (spec §6.5).
 // yaml:"-" prevents it being read from or written to the YAML file.
 type Config struct {
@@ -348,7 +348,7 @@ Append to `internal/config/config_test.go`:
 ```go
 func TestLoad_MissingNetworksKey(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 600
 `), 0o600); err != nil {
 		t.Fatal(err)
@@ -362,7 +362,7 @@ func TestLoad_MissingNetworksKey(t *testing.T) {
 
 func TestLoad_IntervalZero(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 0
 networks:
   - "Home"
@@ -378,7 +378,7 @@ networks:
 
 func TestLoad_MalformedYAML(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: high
 networks:
   - "Home"
@@ -394,7 +394,7 @@ networks:
 
 func TestLoad_NullNetworks(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 3600
 networks: null
 `), 0o600); err != nil {
@@ -410,7 +410,7 @@ networks: null
 // Spec §4.3: "SSID whitespace: Trimmed at load time."
 func TestLoad_TrimsSSIDWhitespace(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 3600
 networks:
   - "  Padded Network  "
@@ -429,7 +429,7 @@ networks:
 
 func TestLoad_EmptyNetworkEntry(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 3600
 networks:
   - ""
@@ -467,7 +467,7 @@ func TestContains_EmptyNetworks(t *testing.T) {
 // Spec §4.2: "interval: 3600  # optional, seconds; defaults to 3600"
 func TestLoad_DefaultInterval(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`networks:
   - "Home"
 `), 0o600); err != nil {
@@ -486,7 +486,7 @@ func TestLoad_DefaultInterval(t *testing.T) {
 // Spec §4.3: explicit networks: [] is valid and matches nothing.
 func TestLoad_EmptyNetworksListIsValid(t *testing.T) {
 	dir := t.TempDir()
-	cfgPath := filepath.Join(dir, "antilocker.yaml")
+	cfgPath := filepath.Join(dir, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte(`interval: 3600
 networks: []
 `), 0o600); err != nil {
@@ -532,7 +532,7 @@ import (
 // distinguish them from IO or parse errors.
 var ErrValidation = errors.New("config validation error")
 
-// Config holds the parsed antilocker.yaml contents.
+// Config holds the parsed anti-locker.yaml contents.
 // Path records the file location for startup logging (spec §6.5).
 // yaml:"-" prevents it being read from or written to the YAML file.
 type Config struct {
@@ -681,7 +681,7 @@ func TestRun_SetupPrompts(t *testing.T) {
 	inputStr := "\nHome Wi-Fi\n\n"
 	var buf bytes.Buffer
 
-	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "antilocker.yaml"), strings.NewReader(inputStr), &buf)
+	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "anti-locker.yaml"), strings.NewReader(inputStr), &buf)
 	if err != nil {
 		t.Fatalf("Run() unexpected error: %v", err)
 	}
@@ -706,7 +706,7 @@ func TestRun_InvalidIntervalRePrompts(t *testing.T) {
 	inputStr := "abc\n-1\n0\n600\nHome Wi-Fi\n\n"
 	var buf bytes.Buffer
 
-	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "antilocker.yaml"), strings.NewReader(inputStr), &buf)
+	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "anti-locker.yaml"), strings.NewReader(inputStr), &buf)
 	if err != nil {
 		t.Fatalf("Run() unexpected error: %v", err)
 	}
@@ -720,7 +720,7 @@ func TestRun_NetworkRequired(t *testing.T) {
 	inputStr := "600\n\nHome Wi-Fi\n\n"
 	var buf bytes.Buffer
 
-	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "antilocker.yaml"), strings.NewReader(inputStr), &buf)
+	cfg, err := config.Run(context.Background(), filepath.Join(t.TempDir(), "anti-locker.yaml"), strings.NewReader(inputStr), &buf)
 	if err != nil {
 		t.Fatalf("Run() unexpected error: %v", err)
 	}
@@ -734,7 +734,7 @@ func TestRun_CancelledByContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // already cancelled before Run starts
 
-	target := filepath.Join(t.TempDir(), "antilocker.yaml")
+	target := filepath.Join(t.TempDir(), "anti-locker.yaml")
 	var buf bytes.Buffer
 
 	_, err := config.Run(ctx, target, strings.NewReader(""), &buf)
@@ -1820,7 +1820,7 @@ func main() {
 		// Description surfaces an example config in --help output (spec §6.1).
 		Description: `Keep this Mac awake when connected to one of your trusted Wi-Fi networks.
 
-Example config (~/.config/antilocker.yaml):
+Example config (~/.config/anti-locker.yaml):
 
   interval: 3600
   networks:
@@ -1831,7 +1831,7 @@ Example config (~/.config/antilocker.yaml):
 			&cli.StringFlag{
 				Name:  "config",
 				Usage: "path to YAML config file",
-				Value: "~/.config/antilocker.yaml",
+				Value: "~/.config/anti-locker.yaml",
 			},
 		},
 		Action: runAction,
@@ -1997,7 +1997,7 @@ func TestMain_CleanShutdown(t *testing.T) {
 	}
 
 	tmp := t.TempDir()
-	cfgPath := filepath.Join(tmp, "antilocker.yaml")
+	cfgPath := filepath.Join(tmp, "anti-locker.yaml")
 	if err := os.WriteFile(cfgPath, []byte("interval: 3600\nnetworks:\n  - \"Test Wi-Fi\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -2064,7 +2064,7 @@ func TestMain_NonTTYFirstRun_FailsClean(t *testing.T) {
 	}
 
 	// Use a path that doesn't exist so the app tries first-run setup.
-	missing := filepath.Join(t.TempDir(), "antilocker.yaml")
+	missing := filepath.Join(t.TempDir(), "anti-locker.yaml")
 
 	cmd := exec.Command(testBinary, "--config", missing)
 	// Pipe stdin (non-terminal) — spec §3.3 requires a clear error, exit 1.
@@ -2281,7 +2281,7 @@ Replace the entire `README.md` with:
 
 ## Usage
 
-    antilocker                                # use ~/.config/antilocker.yaml
+    antilocker                                # use ~/.config/anti-locker.yaml
     antilocker --config /path/to/config.yaml  # custom config path
 
 On first run (no config file), `antilocker` will interactively ask for:

@@ -21,13 +21,13 @@ var version = "dev" // overridden by ldflags
 
 func main() {
 	app := &cli.Command{
-		Name:    "antilocker",
+		Name:    "anti-locker",
 		Usage:   "keep macOS awake conditionally based on Wi-Fi network",
 		Version: version,
 		// Description surfaces an example config in --help output (spec §6.1).
 		Description: `Keep this Mac awake when connected to one of your trusted Wi-Fi networks.
 
-Example config (~/.config/antilocker.yaml):
+Example config (~/.config/anti-locker.yaml):
 
   interval: 3600
   networks:
@@ -38,7 +38,7 @@ Example config (~/.config/antilocker.yaml):
 			&cli.StringFlag{
 				Name:  "config",
 				Usage: "path to YAML config file",
-				Value: "~/.config/antilocker.yaml",
+				Value: "~/.config/anti-locker.yaml",
 			},
 		},
 		Action: runAction,
@@ -89,7 +89,7 @@ func runAction(ctx context.Context, c *cli.Command) error {
 	}
 
 	mgr := keepawake.NewExecManager()
-	defer mgr.Stop() // guarantee caffeinate never outlives antilocker (spec §7)
+	defer mgr.Stop() // guarantee caffeinate never outlives anti-locker (spec §7)
 
 	w := wifi.NewExecProvider(nil)
 

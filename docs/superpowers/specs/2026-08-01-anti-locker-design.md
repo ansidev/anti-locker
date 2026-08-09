@@ -40,7 +40,7 @@ By design, `caffeinate -i` only blocks *idle system sleep*. The user can still:
 
 ### 3.3 First-run setup (config file missing)
 
-**Path rule:** Setup writes to the **effective** config path (default `~/.config/antilocker.yaml` or the `--config` override). The printed `<path>` below is always this effective path.
+**Path rule:** Setup writes to the **effective** config path (default `~/.config/anti-locker.yaml` or the `--config` override). The printed `<path>` below is always this effective path.
 
 1. Print: `No config found at <path> — let's set one up.`
 2. Prompt: `Check interval in seconds [3600]:` — empty input defaults to `3600`. Non-numeric or `<= 0` values cause re-prompt.
@@ -60,7 +60,7 @@ If stdin is not a TTY (e.g. stdin is piped or closed), first-run setup cannot pr
 
 ### 4.1 File location
 
-- Default: `~/.config/antilocker.yaml`
+- Default: `~/.config/anti-locker.yaml`
 - Override: `antilocker --config /path/to/config.yaml`
 - `~` is expanded at startup.
 
