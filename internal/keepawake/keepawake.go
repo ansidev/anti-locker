@@ -10,8 +10,8 @@ import (
 
 // Manager is the seam injected into internal/loop for testing.
 type Manager interface {
-	Start(network string) error // no-op if already running
-	Stop()                      // no-op if already stopped
+	Start(network string, caffeinateArg string) error // no-op if already running
+	Stop()                                            // no-op if already stopped
 	IsRunning() bool
 }
 
@@ -63,10 +63,10 @@ func NewExecManager(opts ...ExecManagerOption) *ExecManager {
 // Verify interface compliance at compile time.
 var _ Manager = (*ExecManager)(nil)
 
-// Start spawns a persistent caffeinate -i process. It is a no-op if
+// Start spawns a persistent caffeinate process. It is a no-op if
 // already running. It also returns nil if a previous child died before
 // Stop was called (we lazily clear state on the next Start).
-func (m *ExecManager) Start(network string) error {
+func (m *ExecManager) Start(network string, caffeinateArg string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -85,7 +85,7 @@ func (m *ExecManager) Start(network string) error {
 		return fmt.Errorf("previous caffeinate child not yet reaped")
 	}
 
-	cmd := m.newCmd("caffeinate", "-i")
+	cmd := m.newCmd("caffeinate", caffeinateArg)
 	cmd.Stdout = nil // discard output per spec
 	cmd.Stderr = nil
 	if err := cmd.Start(); err != nil {

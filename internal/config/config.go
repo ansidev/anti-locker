@@ -18,9 +18,10 @@ var ErrValidation = errors.New("config validation error")
 // Path records the file location for startup logging (spec §6.5).
 // yaml:"-" prevents it being read from or written to the YAML file.
 type Config struct {
-	Path     string   `yaml:"-"`
-	Interval int      `yaml:"interval"`
-	Networks []string `yaml:"networks"`
+	Path          string   `yaml:"-"`
+	Interval      int      `yaml:"interval"`
+	Networks      []string `yaml:"networks"`
+	CaffeinateArg string   `yaml:"caffeinate_arg"`
 }
 
 // Load reads a YAML config file from path, parses and validates it,
@@ -43,19 +44,25 @@ func Load(path string) (*Config, error) {
 	// (nil pointer → default 3600, spec §4.2) from "explicitly 0"
 	// (validation error per §4.3 / TestLoad_IntervalZero).
 	var raw struct {
-		Interval *int     `yaml:"interval"`
-		Networks []string `yaml:"networks"`
+		Interval      *int     `yaml:"interval"`
+		Networks      []string `yaml:"networks"`
+		CaffeinateArg *string   `yaml:"caffeinate_arg"`
 	}
 	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return nil, err
 	}
 
 	if raw.Interval == nil {
-		cfg.Interval = 3600 // specified default (spec §4.2)
+		cfg.Interval = 3600
 	} else {
 		cfg.Interval = *raw.Interval
 	}
 	cfg.Networks = raw.Networks
+	if raw.CaffeinateArg == nil {
+		cfg.CaffeinateArg = "-i"
+	} else {
+		cfg.CaffeinateArg = *raw.CaffeinateArg
+	}
 
 	if err := validate(&cfg); err != nil {
 		return nil, err
@@ -85,6 +92,9 @@ func validate(cfg *Config) error {
 	}
 	if cfg.Interval <= 0 {
 		return fmt.Errorf("%w: interval must be a positive integer, got %d", ErrValidation, cfg.Interval)
+	}
+	if len(cfg.CaffeinateArg) == 0 {
+		return fmt.Errorf("%w: caffeinate_arg must be a non-empty string, got %q", ErrValidation, cfg.CaffeinateArg)
 	}
 
 	// De-duplicate networks in place, preserving order. Print a startup

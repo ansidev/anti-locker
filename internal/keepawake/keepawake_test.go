@@ -49,7 +49,7 @@ func TestExecManager_StartStop(t *testing.T) {
 	}
 
 	// First start
-	if err := m.Start("Home Wi-Fi"); err != nil {
+	if err := m.Start("Home Wi-Fi", "-i"); err != nil {
 		t.Fatalf("Start() unexpected error: %v", err)
 	}
 	if !m.IsRunning() {
@@ -57,7 +57,7 @@ func TestExecManager_StartStop(t *testing.T) {
 	}
 
 	// Second start is a no-op
-	if err := m.Start("Home Wi-Fi"); err != nil {
+	if err := m.Start("Home Wi-Fi", "-i"); err != nil {
 		t.Fatalf("second Start() unexpected error: %v", err)
 	}
 

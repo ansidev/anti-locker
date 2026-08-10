@@ -41,7 +41,7 @@ func Run(ctx context.Context, cfg *config.Config, w wifi.Provider, k keepawake.M
 func check(cfg *config.Config, w wifi.Provider, k keepawake.Manager) {
 	ssid, err := w.CurrentSSID()
 	if err != nil {
-		log.Printf("warn: ssid lookup failed: %v", err)
+		log.Printf("WARN: ssid lookup failed: %v", err)
 		return
 	}
 
@@ -50,12 +50,12 @@ func check(cfg *config.Config, w wifi.Provider, k keepawake.Manager) {
 
 	switch {
 	case matched && !running:
-		log.Printf("joining %q — starting caffeinate", ssid)
-		if err := k.Start(ssid); err != nil {
-			log.Printf("warn: caffeinate start failed: %v", err)
+		log.Printf("Joining %q — Starting \"caffeinate %s\"", ssid, cfg.CaffeinateArg)
+		if err := k.Start(ssid, cfg.CaffeinateArg); err != nil {
+			log.Printf("WARN: caffeinate start failed: %v", err)
 		}
 	case !matched && running:
-		log.Printf("left network — stopping caffeinate")
+		log.Printf("Left network — Stopping caffeinate")
 		k.Stop()
 	}
 }
