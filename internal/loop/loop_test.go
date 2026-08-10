@@ -32,7 +32,7 @@ type fakeKeepAwake struct {
 	running bool
 }
 
-func (f *fakeKeepAwake) Start(network string) error {
+func (f *fakeKeepAwake) Start(network string, caffeinateArg string) error {
 	f.started = append(f.started, network)
 	f.running = true
 	return nil
