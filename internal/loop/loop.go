@@ -48,6 +48,12 @@ func check(cfg *config.Config, w wifi.Provider, k keepawake.Manager) {
 	matched := cfg.Contains(ssid)
 	running := k.IsRunning()
 
+	// Report the connected network on every check so the log always shows
+	// which Wi-Fi the Mac is on, even when it is not a trusted network.
+	if !matched {
+		log.Printf("Connected to %q — not in trusted networks", ssid)
+	}
+
 	switch {
 	case matched && !running:
 		log.Printf("Joining %q — Starting \"caffeinate %s\"", ssid, cfg.CaffeinateArg)

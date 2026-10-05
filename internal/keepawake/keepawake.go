@@ -2,6 +2,7 @@ package keepawake
 
 import (
 	"fmt"
+	"log"
 	"os/exec"
 	"sync"
 	"syscall"
@@ -101,12 +102,21 @@ func (m *ExecManager) Start(network string, caffeinateArg string) error {
 	reapDone := make(chan struct{})
 	m.reapDone = reapDone
 	go func(c *exec.Cmd) {
-		_ = c.Wait()
+		err := c.Wait()
 		m.mu.Lock()
-		if m.cmd == c {
+		// Stop() clears m.cmd before the child exits, so a still-tracked
+		// child means it died without being asked to — worth surfacing,
+		// because the loop will silently start a replacement otherwise.
+		tracked := m.cmd == c
+		if tracked {
 			m.alive = false
+			m.cmd = nil
+			m.reapDone = nil
 		}
 		m.mu.Unlock()
+		if tracked {
+			log.Printf("WARN: caffeinate exited on its own: %v", err)
+		}
 		close(reapDone)
 	}(cmd)
 

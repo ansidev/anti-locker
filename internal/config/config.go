@@ -46,7 +46,7 @@ func Load(path string) (*Config, error) {
 	var raw struct {
 		Interval      *int     `yaml:"interval"`
 		Networks      []string `yaml:"networks"`
-		CaffeinateArg *string   `yaml:"caffeinate_arg"`
+		CaffeinateArg *string  `yaml:"caffeinate_arg"`
 	}
 	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return nil, err

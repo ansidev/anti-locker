@@ -1,7 +1,10 @@
 package loop_test
 
 import (
+	"bytes"
 	"context"
+	"log"
+	"strings"
 	"testing"
 	"time"
 
@@ -110,5 +113,34 @@ func TestRun_SignalStopsKeepAwake(t *testing.T) {
 	}
 	if k.stopped != 1 {
 		t.Errorf("stopped count = %d, want 1 (should be stopped on shutdown)", k.stopped)
+	}
+}
+
+func captureLog(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	var buf bytes.Buffer
+	orig := log.Writer()
+	log.SetOutput(&buf)
+	t.Cleanup(func() { log.SetOutput(orig) })
+	return &buf
+}
+
+func TestRun_LogsConnectedSSIDWhenUnmatched(t *testing.T) {
+	buf := captureLog(t)
+	w := &fakeWiFi{ssids: []string{"Office Wi-Fi"}}
+	k := &fakeKeepAwake{}
+	cfg := &config.Config{Interval: 10, Networks: []string{"Home Wi-Fi"}}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(100 * time.Millisecond) // allow the immediate check only
+		cancel()
+	}()
+	loop.Run(ctx, cfg, w, k)
+
+	// The unmatched network must be reported even though no state
+	// transition happens (user-requested per-check visibility).
+	if want := `Connected to "Office Wi-Fi" — not in trusted networks`; !strings.Contains(buf.String(), want) {
+		t.Errorf("log output missing %q, got:\n%s", want, buf.String())
 	}
 }

@@ -1,0 +1,3 @@
+kind: Fixed
+body: Recover from a stuck WifiScanner helper launch (macwifi "waiting for helper to connect: accept tcp ... i/o timeout") by refreshing the extraction cache and retrying, and fall back to `ipconfig getsummary` per the design spec when the helper still fails.
+time: 2026-10-05T13:25:00+07:00
