@@ -11,14 +11,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            goos: linux
-            goarch: amd64
-            ext: ""
-          - os: ubuntu-latest
-            goos: linux
-            goarch: arm64
-            ext: ""
           - os: macos-latest
             goos: darwin
             goarch: amd64
@@ -27,10 +19,6 @@ jobs:
             goos: darwin
             goarch: arm64
             ext: ""
-          - os: windows-latest
-            goos: windows
-            goarch: amd64
-            ext: ".exe"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
