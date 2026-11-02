@@ -6,6 +6,14 @@
 
 ## Install
 
+### Homebrew (macOS)
+
+    brew tap ansidev/anti-locker
+    brew trust --formula ansidev/anti-locker/anti-locker
+    brew install anti-locker
+
+### Build from source
+
     go build -o anti-locker .
     # optionally: install -m 0755 anti-locker /usr/local/bin/anti-locker
 
