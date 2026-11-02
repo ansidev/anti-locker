@@ -50,8 +50,8 @@ class AntiLocker < Formula
   end
 end
 EOF
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "Le Minh Tri"
+          git config user.email "ansidev@gmail.com"
           git add Formula/anti-locker.rb
           if git diff --cached --quiet; then
             echo "Formula already up to date for ${TAG}"
