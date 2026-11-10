@@ -65,6 +65,23 @@ func TestRun_NetworkRequired(t *testing.T) {
 	}
 }
 
+func TestRun_PersistsDefaultCaffeinateArg(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "anti-locker.yaml")
+
+	_, err := config.Run(context.Background(), target, strings.NewReader("\nHome Wi-Fi\n\n"), &bytes.Buffer{})
+	if err != nil {
+		t.Fatalf("Run() unexpected error: %v", err)
+	}
+
+	cfg, err := config.Load(target)
+	if err != nil {
+		t.Fatalf("Load() after first-run setup: %v", err)
+	}
+	if cfg.CaffeinateArg != "-i" {
+		t.Errorf("CaffeinateArg = %q, want %q", cfg.CaffeinateArg, "-i")
+	}
+}
+
 func TestRun_CancelledByContext(t *testing.T) {
 	// Spec §3.4: cancelled context must return ErrCancelled without creating a file.
 	ctx, cancel := context.WithCancel(context.Background())

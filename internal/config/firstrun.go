@@ -74,9 +74,10 @@ func Run(ctx context.Context, path string, reader io.Reader, w io.Writer) (*Conf
 	}
 
 	cfg := &Config{
-		Path:     path,
-		Interval: interval,
-		Networks: networks,
+		Path:          path,
+		Interval:      interval,
+		Networks:      networks,
+		CaffeinateArg: "-i",
 	}
 
 	if err := persistConfig(path, cfg); err != nil {
