@@ -47,6 +47,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
         run: |
           ASSET="anti-locker-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
-          gh release upload "${{ github.event.release.tag_name }}" "${ASSET}" --clobber
+          gh release upload "$TAG" "${ASSET}" --clobber
