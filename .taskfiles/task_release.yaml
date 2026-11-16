@@ -5,59 +5,88 @@ version: "3"
 env:
   TAG_PREFIX: v
   CHANGES_DIR: .changes
-
-vars:
-  VERSION_FILE: go.mod go.sum
+  CHANGELOG_FILE: CHANGELOG.md
+  VERSION_FILE: main.go
 
 tasks:
   prepare:
-    desc: Install tools
+    desc: Install the required tools (assumes macOS/Homebrew and a Go toolchain)
     cmds:
-      - go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest
-      - go install github.com/miniscruff/changie@latest
+      - brew install git-cliff changie typos-cli
+    silent: true
 
   batch_changelog:
-    desc: Generate changelog for existing git tags
+    desc: Regenerate the changelog version file for every existing git tag (overwrites existing version files)
     cmds:
-      - rm ${CHANGES_DIR}/${TAG_PREFIX}*.md || true
-      - for VERSION_TAG in $(git -c 'versionsort.suffix=-' tag --list --sort=v:refname); do git-chglog --output ${CHANGES_DIR}/${VERSION_TAG}.md ${VERSION_TAG} ; done
+      - mkdir -p ${CHANGES_DIR}
+      - |
+        for VERSION_TAG in $(git -c 'versionsort.suffix=-' tag --list --sort=v:refname); do
+          PREV_TAG=$(git -c 'versionsort.suffix=-' tag --list --sort=v:refname | awk -v t="${VERSION_TAG}" '$0==t{exit} {last=$0} END{print last}')
+          if [ -z "${PREV_TAG}" ]; then
+            # First tag: no previous tag; a bare full SHA walks the full history (a range would drop the root commit).
+            git-cliff --strip header --tag "${VERSION_TAG}" "$(git rev-list -1 "${VERSION_TAG}")" --output "${CHANGES_DIR}/${VERSION_TAG}.md"
+          else
+            git-cliff --strip header --tag "${VERSION_TAG}" "${PREV_TAG}..${VERSION_TAG}" --output "${CHANGES_DIR}/${VERSION_TAG}.md"
+          fi
+        done
     silent: true
 
   changelog:
-    desc: Generate changelog for an existing version
-    vars:
-      VERSION_TAG: ${TAG_PREFIX}{{.CLI_ARGS}}
+    desc: Generate the changelog for an existing version (task release:changelog VERSION=1.2.0)
     cmds:
-      - git-chglog --output ${CHANGES_DIR}/{{.VERSION_TAG}}.md {{.VERSION_TAG}}
+      - test -n "{{.VERSION}}" || { echo "VERSION is required, e.g. task release:changelog VERSION=1.2.0" >&2; exit 1; }
+      - mkdir -p ${CHANGES_DIR}
+      - |
+        VERSION_TAG="${TAG_PREFIX}{{.VERSION}}"
+        PREV_TAG=$(git -c 'versionsort.suffix=-' tag --list --sort=v:refname | awk -v t="${VERSION_TAG}" '$0==t{exit} {last=$0} END{print last}')
+        if git rev-parse -q --verify "refs/tags/${VERSION_TAG}" >/dev/null; then
+          END_REF="${VERSION_TAG}"
+        else
+          END_REF="HEAD"
+        fi
+        if [ -z "${PREV_TAG}" ]; then
+          # First release: no range, so git-cliff walks the full history including the root commit.
+          echo "Version range: full history up to ${END_REF}"
+          git-cliff --strip header --tag "${VERSION_TAG}" "${END_REF}" --output "${CHANGES_DIR}/${VERSION_TAG}.md"
+        else
+          echo "Version range: ${PREV_TAG}..${END_REF}"
+          git-cliff --strip header --tag "${VERSION_TAG}" "${PREV_TAG}..${END_REF}" --output "${CHANGES_DIR}/${VERSION_TAG}.md"
+        fi
     silent: true
 
   changelog_next:
-    desc: Generate changelog for a new version
-    vars:
-      VERSION_TAG: ${TAG_PREFIX}{{.CLI_ARGS}}
+    desc: Generate the changelog for a new version (task release:changelog_next VERSION=1.3.0)
     cmds:
-      - git-chglog --output ${CHANGES_DIR}/{{.VERSION_TAG}}.md --next-tag {{.VERSION_TAG}} {{.VERSION_TAG}}
-    silent: true
-
-  commit_release:
-    desc: Create release commit
-    vars:
-      VERSION_TAG: ${TAG_PREFIX}{{.CLI_ARGS}}
-    cmds:
-      - git add ${CHANGES_DIR}
-      - git add CHANGELOG.md
-      - git add {{.VERSION_FILE}}
-      - |
-        git commit -m "chore(release): {{.VERSION_TAG}}"
+      - test -n "{{.VERSION}}" || { echo "VERSION is required, e.g. task release:changelog_next VERSION=1.3.0" >&2; exit 1; }
+      - mkdir -p ${CHANGES_DIR}
+      - git-cliff --strip header --unreleased --tag "${TAG_PREFIX}{{.VERSION}}" --output "${CHANGES_DIR}/${TAG_PREFIX}{{.VERSION}}.md"
     silent: true
 
   create:
-    desc: Generate release commit
+    desc: Generate release notes for a version and commit them (task release:create VERSION=1.2.0; omits VERSION to auto-bump)
     vars:
-      VERSION_TAG: ${TAG_PREFIX}{{.CLI_ARGS}}
+      RESOLVED_VERSION:
+        sh: if [ -n "{{.VERSION}}" ]; then echo "{{.VERSION}}"; else git-cliff --bumped-version | sed 's/^v//'; fi
     cmds:
-      - echo "Releasing version {{.VERSION_TAG}}"
-      - task release:changelog_next -- {{.CLI_ARGS}}
+      - echo "Releasing version v{{.RESOLVED_VERSION}}"
+      - task: changelog
+        vars:
+          # Forward the resolved version explicitly; nested tasks do not
+          # inherit vars computed in the calling task.
+          VERSION: "{{.RESOLVED_VERSION}}"
       - changie merge
-      - task release:commit_release -- {{.CLI_ARGS}}
+      - task: commit_release
+        vars:
+          # Forward the resolved version explicitly; nested tasks do not
+          # inherit vars computed in the calling task.
+          VERSION: "{{.RESOLVED_VERSION}}"
+    silent: true
+
+  commit_release:
+    desc: Stage and commit the files generated by release:create (task release:commit_release VERSION=1.2.0)
+    cmds:
+      - test -n "{{.VERSION}}" || { echo "VERSION is required, e.g. task release:commit_release VERSION=1.2.0" >&2; exit 1; }
+      - git add ${VERSION_FILE} ${CHANGELOG_FILE} ${CHANGES_DIR}/${TAG_PREFIX}{{.VERSION}}.md
+      - |
+        "git commit -m "chore(release): ${TAG_PREFIX}{{.VERSION}}"
     silent: true

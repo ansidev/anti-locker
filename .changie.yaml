@@ -1,13 +1,15 @@
+# Changie configuration for the git-cliff based changelog generator.
+# https://changie.dev
 changesDir: .changes
 unreleasedDir: unreleased
-headerPath: ../.chglog/CHANGELOG_HEADER.tpl.md
+headerPath: ../.changie/CHANGELOG_HEADER.md
 changelogPath: CHANGELOG.md
 versionExt: md
 newlines:
   afterChangelogHeader: 0
   beforeChangelogVersion: 1
   endOfVersion: 1
-# replacements:
-#   - path: "package.json"
-#     find: '"version": ".*"'
-#     replace: '"version": "{{.VersionNoPrefix}}"'
+replacements:
+  - path: main.go
+    find: 'version = ".*"'
+    replace: 'version = "{{.VersionNoPrefix}}"'
